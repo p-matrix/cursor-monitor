@@ -4,6 +4,18 @@ All notable changes to `@pmatrix/cursor-monitor` will be documented in this file
 
 ---
 
+## [0.3.1] — 2026-03-13 — Documentation fix
+
+### Fixed
+
+- **README**: Safety Gate instant block rules corrected to match actual implementation
+  - `sudo` → `sudo rm` / `sudo mkfs` / `sudo dd` (only destructive sudo commands are instant-blocked)
+  - Added `base64 --decode ... | sh` obfuscated RCE pattern
+  - Added `chmod 777 /` with correct META_CONTROL delta (-0.15)
+  - Plain `sudo <cmd>` is HIGH-risk (blocked at R(t) ≥ 0.15), not an instant block
+
+---
+
 ## [0.3.0] — 2026-03-12 — Initial GA Release
 
 ### Added
