@@ -76,7 +76,7 @@ export async function runMcpServer(): Promise<void> {
 
   const server = new Server(
     // MCP server implementation version — keep in sync with package.json
-    { name: 'pmatrix', version: '0.3.0' },
+    { name: 'pmatrix', version: '0.3.1' },
     { capabilities: { tools: {} } }
   );
 
