@@ -133,9 +133,11 @@ The T1 Safety Gate (`beforeShellExecution`) analyzes shell commands before execu
 | >= 0.75 | Halt | **Block** | **Block** | **Block** |
 
 **Instant block rules** (regardless of R(t)):
-- `sudo` / `chmod 777` — privilege escalation (META_CONTROL -0.25)
-- `rm -rf /` — destructive deletion (META_CONTROL -0.30)
+- `sudo rm` / `sudo mkfs` / `sudo dd` — privilege escalation + destructive (META_CONTROL -0.25)
+- `chmod 777 /` — dangerous permission change (META_CONTROL -0.15)
+- `rm -rf <non-tmp path>` — destructive deletion (META_CONTROL -0.30)
 - `curl ... | sh` — remote code execution (META_CONTROL -0.20)
+- `base64 --decode ... | sh` — obfuscated RCE (META_CONTROL -0.25)
 
 > Note: Instant block rules are enforced independently of `safetyGate.enabled`.
 
