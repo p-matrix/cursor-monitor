@@ -189,13 +189,46 @@ Trust Grade: A (≥80) · B (≥60) · C (≥40) · D (≥20) · E (<20)
 
 ---
 
-## Dashboard
+## Server-side Setup
 
-`https://app.pmatrix.io`
+The monitor sends signals to `POST /v1/inspect/stream` on your P-MATRIX server.
 
-- **Story tab** — R(t) trajectory, mode transitions, tool block events
+Production server: `https://api.pmatrix.io`
+
+Dashboard: `https://app.pmatrix.io`
+
+- **Story tab** — R(t) trajectory timeline, mode transitions, tool block events
 - **Analytics tab** — Grade history, stability trends
 - **Logs tab** — Live session events, audit trail, META_CONTROL incidents
+
+---
+
+## Configuration Reference
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `serverUrl` | string | — | P-MATRIX server URL |
+| `agentId` | string | — | Agent ID from P-MATRIX dashboard |
+| `apiKey` | string | — | API key (`pm_live_...`). Use env var. |
+| `safetyGate.enabled` | boolean | `true` | Enable Safety Gate |
+| `safetyGate.serverTimeoutMs` | number | `2500` | Server query timeout (fail-open) |
+| `safetyGate.customToolRisk` | object | `{}` | Override tool risk tier |
+| `credentialProtection.enabled` | boolean | `true` | Enable credential scanning |
+| `credentialProtection.customPatterns` | string[] | `[]` | Additional regex patterns |
+| `killSwitch.autoHaltOnRt` | number | `0.75` | Auto-halt R(t) threshold |
+| `dataSharing` | boolean | `false` | Send safety signals to P-MATRIX server (opt-in) |
+| `debug` | boolean | `false` | Verbose logging |
+
+---
+
+## Offline / Server-Down Behavior
+
+- **No cache (initial)**: R(t) = 0.0 (fail-open, no blocking before first connection)
+- **Cache exists + server down**: Last known R(t) is kept — Safety Gate continues using it
+- **Server timeout (> 2,500 ms)**: Fail-open — shell command is allowed
+- **`~/.pmatrix/HALT` exists**: All shell commands blocked regardless of server state
+
+Credential scanning and instant block rules always work offline — they have no server dependency.
 
 ---
 
