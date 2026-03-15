@@ -1,6 +1,6 @@
 # @pmatrix/cursor-monitor
 
-Runtime safety governance for Cursor — **20-hook observability + shell-level enforcement.**
+Runtime safety governance for Cursor — **16-hook observability + shell-level enforcement.**
 
 Analyzes shell commands before execution, detects credential leaks in prompts, and continuously measures agent risk with live Trust Grade (A–E).
 
@@ -17,12 +17,12 @@ Analyzes shell commands before execution, detects credential leaks in prompts, a
   The only production-verified enforcement path in Cursor 2.6.18.
 - **Safety Gate T2** (`beforeMCPExecution`) — MCP tool gate (best-effort, unverified in Cursor 2.6.18).
 - **Safety Gate T3** (`preToolUse`) — Code implemented; deny currently broken in Cursor (auto-activates when Cursor fixes the bug).
-- **Credential Protection** (`beforeSubmitPrompt`) — Detects and blocks 11 types of API keys and secrets before they reach the agent.
+- **Credential Protection** (`beforeSubmitPrompt`) — Detects and blocks 16 types of API keys and secrets before they reach the agent.
 - **Kill Switch** — Automatically halts when R(t) ≥ 0.75. Manually via `pmatrix_halt` MCP tool. Creates `~/.pmatrix/HALT` to block all sessions.
 
 ### Behavioral Intelligence
 
-- **20 Cursor hooks → 4-axis signal mapping** (BASELINE / NORM / STABILITY / META_CONTROL)
+- **16 Cursor hooks → 4-axis signal mapping** (BASELINE / NORM / STABILITY / META_CONTROL)
 - **Grade report** (`stop.followup_message`) — Automatic session summary with Trust Grade, R(t), and block count
 - **Subagent tracking** — spawn count, task duration, modified files count
 - **File edit patterns** — edit count and volume as STABILITY signal
@@ -156,18 +156,24 @@ The T1 Safety Gate (`beforeShellExecution`) analyzes shell commands before execu
 
 ## Credential Protection
 
-Detects and blocks 11 credential types before submission:
+Detects and blocks 16 credential types before submission:
 
-- OpenAI API keys (`sk-proj-...`)
+- OpenAI Project keys (`sk-proj-...`)
+- OpenAI Legacy keys (`sk-...`)
 - Anthropic API keys (`sk-ant-...`)
 - AWS Access Keys (`AKIA...`)
-- GitHub tokens (`ghp_...`, `github_pat_...`)
-- Private keys (`-----BEGIN PRIVATE KEY-----`)
-- Database URLs (`postgresql://user:pass@...`)
+- GitHub tokens (`ghp_...`)
+- GitHub Fine-grained tokens (`github_pat_...`)
+- Private keys (PEM) (`-----BEGIN PRIVATE KEY-----`)
+- Database URLs (`postgresql://`, `mysql://`)
 - Passwords (`password: "..."`)
-- Bearer tokens
+- Bearer tokens (`Authorization: Bearer ...`)
 - Google AI keys (`AIza...`)
 - Stripe keys (`sk_live_...`, `sk_test_...`)
+- Slack tokens (`xox[bpras]-...`)
+- npm tokens (`npm_...`)
+- SendGrid keys (`SG....`)
+- Discord Bot tokens
 
 Code blocks in messages are excluded from scanning to prevent false positives.
 
@@ -176,15 +182,17 @@ Code blocks in messages are excluded from scanning to prevent false positives.
 ## R(t) Formula
 
 ```
-R(t) = 1 - (BASELINE + NORM + STABILITY + META_CONTROL) / 4
+R(t) = 1 - (BASELINE + NORM + (1 - STABILITY) + META_CONTROL) / 4
 ```
 
-| Axis | Meaning |
-|------|---------|
-| BASELINE | Initial config integrity — higher = safer |
-| NORM | Behavioral normalcy — higher = safer |
-| STABILITY | Trajectory stability — lower = more drift |
-| META_CONTROL | Self-control capacity — higher = safer |
+> stability is inverted: higher stability = more drift = higher risk
+
+| Axis | Field | Meaning |
+|------|-------|---------|
+| BASELINE | `baseline` | Initial config integrity — higher = safer |
+| NORM | `norm` | Behavioral normalcy — higher = safer |
+| STABILITY | `stability` | Trajectory stability — higher = more drift |
+| META_CONTROL | `meta_control` | Self-control capacity — higher = safer |
 
 P-Score = `round(100 * (1 - R(t)), 2)`
 Trust Grade: A (≥80) · B (≥60) · C (≥40) · D (≥20) · E (<20)
@@ -231,6 +239,24 @@ Dashboard: `https://app.pmatrix.io`
 - **`~/.pmatrix/HALT` exists**: All shell commands blocked regardless of server state
 
 Credential scanning and instant block rules always work offline — they have no server dependency.
+
+---
+
+## 4.0 Field Integration (v0.4.0+)
+
+When connected to a P-MATRIX Field, the monitor participates in the 4.0 Protocol with IPC-based degraded SV (neutral 0.5 axes):
+
+- **State Vector Exchange** — Sends behavioral measurements to Field peers
+- **`pmatrix_field_status`** MCP tool — Query Field connection status
+
+**Activation:** Set both environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `PMATRIX_FIELD_ID` | Field identifier |
+| `PMATRIX_FIELD_NODE_ID` | Node identifier |
+
+When not set, the monitor runs in standalone 3.5 mode (default).
 
 ---
 

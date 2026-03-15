@@ -36,6 +36,17 @@ import {
   isHaltActive,
   PersistedSessionState,
 } from '../state-store';
+import { isField4Enabled, writeFieldState } from '@pmatrix/field-node-runtime';
+
+/** Write field state partial for MCP IPC poller (fail-open, no-op if 4.0 not enabled) */
+function syncFieldState(sessionId: string, state: PersistedSessionState): void {
+  if (!isField4Enabled()) return;
+  writeFieldState(sessionId, {
+    currentRt: state.currentRt,
+    currentMode: state.currentMode,
+    totalTurns: state.shellCommandCount,
+  });
+}
 
 export async function handleBeforeShellExecution(
   event: CursorBeforeShellExecutionInput,
@@ -125,6 +136,7 @@ export async function handleBeforeShellExecution(
 
   // ⑧ ALLOW
   saveState(state);
+  syncFieldState(sessionId, state);
   return allow();
 }
 

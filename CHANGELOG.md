@@ -4,6 +4,18 @@ All notable changes to `@pmatrix/cursor-monitor` will be documented in this file
 
 ---
 
+## [0.4.0] — 2026-03-15
+
+### Added
+
+- **4.0 Field Integration** — FieldNode + IPC poller + degraded SV (neutral 0.5 axes)
+- `pmatrix_field_status` MCP tool (connected, peerCount, myPosture, fieldId)
+- SIGTERM/SIGINT graceful shutdown (FieldNode.stop)
+
+### Changed
+
+- `@pmatrix/field-node-runtime@^0.2.0` 의존성 추가
+
 ## [0.3.1] — 2026-03-13 — Documentation fix
 
 ### Fixed

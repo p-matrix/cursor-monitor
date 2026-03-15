@@ -33,6 +33,17 @@ import {
   PersistedSessionState,
 } from '../state-store';
 import { scanCredentials } from '../credential-scanner';
+import { isField4Enabled, writeFieldState } from '@pmatrix/field-node-runtime';
+
+/** Write field state partial for MCP IPC poller (fail-open, no-op if 4.0 not enabled) */
+function syncFieldState(sessionId: string, state: PersistedSessionState): void {
+  if (!isField4Enabled()) return;
+  writeFieldState(sessionId, {
+    currentRt: state.currentRt,
+    currentMode: state.currentMode,
+    totalTurns: state.promptTurnCount,
+  });
+}
 
 export async function handleBeforeSubmitPrompt(
   event: CursorBeforeSubmitPromptInput,
@@ -92,6 +103,7 @@ export async function handleBeforeSubmitPrompt(
   }
 
   saveState(state);
+  syncFieldState(sessionId, state);
   return { continue: true };
 }
 

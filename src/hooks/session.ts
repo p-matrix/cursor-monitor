@@ -44,6 +44,7 @@ import {
   cleanupStaleStates,
   PersistedSessionState,
 } from '../state-store';
+import { deleteFieldState } from '@pmatrix/field-node-runtime';
 
 // ─── sessionStart ─────────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ export async function handleSessionEnd(
 
   // Clean up session state
   deleteState(sessionId);
+  deleteFieldState(sessionId);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
