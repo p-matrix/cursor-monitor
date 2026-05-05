@@ -4,6 +4,44 @@ All notable changes to `@pmatrix/cursor-monitor` will be documented in this file
 
 ---
 
+## [0.6.0] — 2026-04-27
+
+### Added (Cross-cutting client 보강 — server Production Polish 정합)
+
+- **Cross-cutting A — Error correlation logging**: HTTP 5xx 응답 body 의 error_id 추출 → stderr 안내 메시지. server Production Polish A error UX 정합.
+- **Cross-cutting B — X-Request-ID 헤더**: outgoing request 마다 crypto.randomUUID() 송출 + response echo 수신. server middleware (commit 533781f) 정합.
+- **Cross-cutting C — Burst 429 handling**: Retry-After + escalating backoff (BURST_RETRY_DELAYS). server burst_rate_limit middleware 정합.
+
+### Tests
+
+- 신규 10 test files (`src/__tests__/`): safety-gate, state-store, credential-scanner, breach-support, client (cross-cutting 검증 포함), config, formatter, pre-tool-use, post-tool-use, session.
+
+---
+
+## [0.5.0] — 2026-04-27
+
+### Changed (BREAKING — Mode literal rename)
+
+- **Phase R-5 Mode naming Gen1 → Gen2 names** (server-side parity per Spec §❷):
+  `'A+1'` → `'normal'` / `'A+0'` → `'caution'` / `'A-1'` → `'alert'` /
+  `'A-2'` → `'critical'` / `'A-0'` → `'halt'`
+- **Affected APIs**: `SafetyMode` union type (`src/types.ts`), `rtToMode()`
+  return values + Safety Gate matrix mode comparisons (`src/safety-gate.ts`),
+  state-store mode field defaults, MCP `status` tool output
+- **Migration**: consumers must update mode string comparisons
+  (`mode === 'A-0'` → `mode === 'halt'` 등). Server protocol output 도
+  Gen2 names 로 통합 (Backend Spec v1.53)
+
+### Fixed (Phase R-6 SDK build hygiene)
+
+- **breach-support.ts**: `getApprovalStatus()` 의 `noUncheckedIndexedAccess`
+  TypeScript narrowing 부재 → `Object is possibly 'undefined'` 3건 fix
+  (explicit local const + null check pattern)
+- **field-node-runtime dependency**: `node_modules/@pmatrix/field-node-runtime`
+  symlink 정합 (`npm install` 로 npm registry 0.2.0 정상 fetch)
+
+---
+
 ## [0.4.0] — 2026-03-15
 
 ### Added

@@ -30,6 +30,7 @@ import {
   saveState,
   PersistedSessionState,
 } from '../state-store';
+import { getBreachSupport } from '../breach-singleton';
 
 // ─── handleSubagentStart ──────────────────────────────────────────────────────
 
@@ -52,14 +53,20 @@ export async function handleSubagentStart(
     );
   }
 
+  // Breach Taxonomy: delegated action type inference
+  const breach = getBreachSupport(config.agentId);
+  const delegatedActionType = breach.inferDelegatedActionType(subagent_type);
+
   // ③ 신호 전송 (fire-and-forget)
   if (config.dataSharing) {
     const signal = buildSignal(state, sessionId, 0.03, {
       event_type: 'subagent_start',
+      event_subtype: 'delegation',
       subagent_type,
       is_parallel_worker,
       task_length: task.length,           // task 원문 미포함 — privacy-first (§5.4)
       subagent_spawn_count: state.subagentSpawnCount,
+      delegated_action_type: delegatedActionType,
       priority: 'normal',
     }, config.frameworkTag ?? 'stable');
     client.sendCritical(signal).catch(() => {});
@@ -93,6 +100,7 @@ export async function handleSubagentStop(
   if (config.dataSharing) {
     const signal = buildSignal(state, sessionId, 0, {
       event_type: 'subagent_stop',
+      event_subtype: 'delegation_complete',
       status,
       duration_ms,
       tool_call_count,

@@ -37,6 +37,7 @@ import {
   PersistedSessionState,
 } from '../state-store';
 import { isField4Enabled, writeFieldState } from '@pmatrix/field-node-runtime';
+import { getBreachSupport } from '../breach-singleton';
 
 /** Write field state partial for MCP IPC poller (fail-open, no-op if 4.0 not enabled) */
 function syncFieldState(sessionId: string, state: PersistedSessionState): void {
@@ -85,6 +86,10 @@ export async function handleBeforeShellExecution(
     process.stderr.write(`[P-MATRIX] beforeShellExecution: cmd="${command.slice(0, 80)}"\n`);
   }
 
+  // Breach Taxonomy: scope tagging
+  const breach = getBreachSupport(agentId);
+  breach.incrementToolCalls();
+
   // ⑤ meta_control 규칙 — command 원문 직접 분석
   const mcBlock = checkMetaControlRules(command, null);
   if (mcBlock !== null) {
@@ -92,8 +97,12 @@ export async function handleBeforeShellExecution(
       event_type: 'meta_control_block',
       priority: 'critical',
       meta_control_delta: mcBlock.metaControlDelta,
+      in_scope: breach.isInScope('AP-1'),
     }, config.frameworkTag ?? 'stable', 0.05);
     client.sendCritical(signal).catch(() => {});
+
+    breach.recordBlockedAction('shell_execution', mcBlock.reason);
+    breach.incrementDenied();
 
     state.shellDenyCount += 1;
     state.safetyGateBlocks += 1;
@@ -117,8 +126,12 @@ export async function handleBeforeShellExecution(
     const blockSignal = buildShellSignal(state, sessionId, command, {
       event_type: 'safety_gate_block',
       priority: 'critical',
+      in_scope: breach.isInScope('AP-1'),
     }, config.frameworkTag ?? 'stable', 0.05);
     client.sendCritical(blockSignal).catch(() => {});
+
+    breach.recordBlockedAction('shell_execution', gateResult.reason);
+    breach.incrementDenied();
 
     state.shellDenyCount += 1;
     state.safetyGateBlocks += 1;
@@ -164,9 +177,11 @@ async function fetchRtWithFailOpen(
     return state.currentRt;
   }
 
+  const breach = getBreachSupport(state.agentId);
   const signal = buildShellSignal(state, sessionId, command, {
     event_type: 'before_shell_execution',
     priority: 'normal',
+    in_scope: breach.isInScope('AP-1'),
   }, config.frameworkTag ?? 'stable');
 
   try {

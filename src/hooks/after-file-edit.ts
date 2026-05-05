@@ -24,6 +24,8 @@ import {
   saveState,
   PersistedSessionState,
 } from '../state-store';
+import { BreachSupport } from '../breach-support';
+import { getBreachSupport } from '../breach-singleton';
 
 export async function handleAfterFileEdit(
   event: CursorAfterFileEditInput,
@@ -31,9 +33,14 @@ export async function handleAfterFileEdit(
   client: PMatrixHttpClient
 ): Promise<void> {
   const sessionId = event.conversation_id;
+  const filePath = event.file_path;
   const editCount = event.edits.length;
 
   const state = loadOrCreateState(sessionId, config.agentId);
+
+  // Breach Taxonomy: file modification tracking
+  const breach = getBreachSupport(config.agentId);
+  breach.incrementFileModifications();
 
   // ② fileEditCount 증가
   state.fileEditCount += 1;
@@ -49,7 +56,7 @@ export async function handleAfterFileEdit(
 
   // ④ 신호 전송 (fire-and-forget)
   if (config.dataSharing) {
-    const signal = buildSignal(state, sessionId, editCount, stability, config.frameworkTag ?? 'stable');
+    const signal = buildSignal(state, sessionId, filePath, editCount, stability, breach, config.frameworkTag ?? 'stable');
     client.sendCritical(signal).catch(() => {});
   }
 
@@ -62,8 +69,10 @@ export async function handleAfterFileEdit(
 function buildSignal(
   state: PersistedSessionState,
   sessionId: string,
+  filePath: string,
   editCount: number,
   stability: number,
+  breach: BreachSupport,
   frameworkTag: 'beta' | 'stable'
 ): SignalPayload {
   return {
@@ -78,10 +87,12 @@ function buildSignal(
     framework_tag: frameworkTag,
     schema_version: '0.3',
     metadata: {
-      event_type: 'file_edit',
+      event_type: 'file_write',
       session_id: sessionId,
-      // file_path, old_string, new_string 절대 미포함 — privacy-first (§5.4)
+      // file_path 상대 경로 — Breach Taxonomy AP-2 file_write 식별 목적
+      file_path: filePath,
       edit_count: editCount,
+      in_scope: breach.isInScope('AP-2', filePath),
       priority: 'normal',
     },
     state_vector: null,

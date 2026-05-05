@@ -24,6 +24,8 @@ import {
   saveState,
   PersistedSessionState,
 } from '../state-store';
+import { BreachSupport } from '../breach-support';
+import { getBreachSupport } from '../breach-singleton';
 
 export async function handleBeforeReadFile(
   event: CursorBeforeReadFileInput,
@@ -41,9 +43,12 @@ export async function handleBeforeReadFile(
     );
   }
 
+  // Breach Taxonomy: scope tagging for file_read
+  const breach = getBreachSupport(config.agentId);
+
   // ③ 신호 전송 (fire-and-forget)
   if (config.dataSharing) {
-    const signal = buildSignal(state, sessionId, file_path.length, config.frameworkTag ?? 'stable');
+    const signal = buildSignal(state, sessionId, file_path, breach, config.frameworkTag ?? 'stable');
     client.sendCritical(signal).catch(() => {});
   }
 
@@ -59,7 +64,8 @@ export async function handleBeforeReadFile(
 function buildSignal(
   state: PersistedSessionState,
   sessionId: string,
-  filePathLength: number,
+  filePath: string,
+  breach: BreachSupport,
   frameworkTag: 'beta' | 'stable'
 ): SignalPayload {
   return {
@@ -74,10 +80,12 @@ function buildSignal(
     framework_tag: frameworkTag,
     schema_version: '0.3',
     metadata: {
-      event_type: 'before_read_file',
+      event_type: 'file_read',
       session_id: sessionId,
-      // file_path 원문 및 content 절대 미포함 — privacy-first (§5.4)
-      file_path_length: filePathLength,
+      // file_path 상대 경로 — Breach Taxonomy AP-2 file_read 식별 목적
+      file_path: filePath,
+      file_path_length: filePath.length,
+      in_scope: breach.isInScope('AP-2', filePath),
       priority: 'normal',
     },
     state_vector: null,

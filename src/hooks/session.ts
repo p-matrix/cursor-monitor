@@ -45,6 +45,8 @@ import {
   PersistedSessionState,
 } from '../state-store';
 import { deleteFieldState } from '@pmatrix/field-node-runtime';
+import { BreachSupport } from '../breach-support';
+import { getBreachSupport } from '../breach-singleton';
 
 // ─── sessionStart ─────────────────────────────────────────────────────────────
 
@@ -113,6 +115,17 @@ export async function handleSessionEnd(
       `[P-MATRIX] sessionEnd: key=${sessionId} turns=${state.promptTurnCount} ` +
       `grade=${state.grade ?? 'N/A'} halted=${state.isHalted} reason=${reason}\n`
     );
+  }
+
+  // Breach Taxonomy: emit session_report observation
+  const breach = getBreachSupport(agentId);
+  if (config.dataSharing) {
+    const reportSignal = buildSessionSignal(state, sessionId, {
+      event_type: 'session_report',
+      priority: 'normal',
+      ...breach.getSessionReport(),
+    }, config.frameworkTag ?? 'stable');
+    client.sendCritical(reportSignal).catch(() => {});
   }
 
   // Send session summary (dataSharing required — §11)
