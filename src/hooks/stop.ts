@@ -52,6 +52,7 @@ export async function handleStop(
 
   // ③ sendSessionSummary (fire-and-forget — 실패해도 followup_message 반환)
   if (config.dataSharing) {
+    // R-X.3 migration: signal_source + framework flow via AdapterIdentity
     const summaryInput: SessionSummaryInput = {
       sessionId,
       agentId: config.agentId,
@@ -60,8 +61,6 @@ export async function handleStop(
       credentialBlocks: state.credentialBlocks,
       safetyGateBlocks: state.safetyGateBlocks,
       endReason: status,
-      signal_source: 'cursor_hook',
-      framework: 'cursor',
       framework_tag: config.frameworkTag ?? 'stable',
     };
     client.sendSessionSummary(summaryInput).catch(() => {});

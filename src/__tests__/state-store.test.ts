@@ -147,10 +147,12 @@ describe('saveState / loadState — round-trip', () => {
     expect(loadState('nonexistent')).toBeNull();
   });
 
-  test('saveState 후 updatedAt 갱신', () => {
+  test('saveState 후 updatedAt 갱신', async () => {
     const s = createDefaultState('sess-u', 'agent');
     const oldUpdatedAt = s.updatedAt;
-    // 시간 보장
+    // 시간 보장 — saveState 가 updatedAt 을 Date.now() 로 bump 하므로,
+    // ms-level granularity 에서 oldUpdatedAt 과 충돌하지 않게 sleep.
+    await new Promise((r) => setTimeout(r, 5));
     s.updatedAt = new Date(Date.now() - 10_000).toISOString();
     saveState(s);
     const loaded = loadState('sess-u');

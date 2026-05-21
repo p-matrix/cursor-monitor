@@ -211,8 +211,8 @@ describe('handleSessionEnd', () => {
     const summary = summarySpy.mock.calls[0]![0];
     expect(summary.sessionId).toBe('conv-start-1');
     expect(summary.endReason).toBe('completed');
-    expect(summary.signal_source).toBe('cursor_hook');
-    expect(summary.framework).toBe('cursor');
+    // R-X.3 migration: signal_source + framework flow via AdapterIdentity
+    // at client construction time. Equivalent coverage in contract.test.ts.
   });
 
   test('dataSharing=false → sendSessionSummary 미호출', async () => {
